@@ -79,33 +79,17 @@ The camera supports two video formats:
   - Compressed format
   - Smaller file sizes
   - Higher compression ratio
-  - Better for storage and transmission
-  - Some quality loss due to compression
 
 - **YUY2 (YUYV, YUV422)**
   - Uncompressed format
   - Larger file sizes
   - Raw pixel data
-  - No quality loss (lossless)
-  - Better for image processing/analysis
 
 You can specify the format in the config file:
 
 ```yaml
 video_format: "MJPEG"  # or "YUY2"
 ```
-
-Choose MJPEG for:
-
-- Recording long videos
-- Saving disk space
-- Standard video recording
-
-Choose YUY2 for:
-
-- Scientific analysis
-- Computer vision tasks
-- When maximum quality is needed
 
 ### Controls
 
