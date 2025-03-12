@@ -7,6 +7,7 @@ Python package to control IMX179 ELP USB cameras using OpenCV. Supports video pr
 - Live video preview
 - Video recording with Unix timestamp filenames
 - Multiple resolution modes support
+- Support for MJPEG and YUY2 video formats
 - Command-line interface
 - Synchronization-friendly (Unix timestamp filenames)
 
@@ -69,6 +70,42 @@ elp-camera record --camera-id 0 --resolution-index 0 --output-dir recordings
 ```
 
 The video will be saved in the specified output directory with a Unix timestamp as the filename (e.g., `1234567890.avi`).
+
+### Video Formats
+
+The camera supports two video formats:
+
+- **MJPEG (Motion JPEG)**
+  - Compressed format
+  - Smaller file sizes
+  - Higher compression ratio
+  - Better for storage and transmission
+  - Some quality loss due to compression
+
+- **YUY2 (YUYV, YUV422)**
+  - Uncompressed format
+  - Larger file sizes
+  - Raw pixel data
+  - No quality loss (lossless)
+  - Better for image processing/analysis
+
+You can specify the format in the config file:
+
+```yaml
+video_format: "MJPEG"  # or "YUY2"
+```
+
+Choose MJPEG for:
+
+- Recording long videos
+- Saving disk space
+- Standard video recording
+
+Choose YUY2 for:
+
+- Scientific analysis
+- Computer vision tasks
+- When maximum quality is needed
 
 ### Controls
 

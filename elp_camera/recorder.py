@@ -35,7 +35,11 @@ class CameraRecorder:
             print(f"Cannot write to directory: {self.output_dir}")
             return False
 
-        fourcc = cv2.VideoWriter_fourcc(*"XVID")
+        # Use the same format as the camera
+        fourcc = self.camera.VIDEO_FORMATS.get(
+            self.camera.current_format,
+            cv2.VideoWriter_fourcc(*"MJPG"),  # Default to MJPEG if not set
+        )
         self.writer = cv2.VideoWriter(
             self.current_filename, fourcc, fps, (width, height)
         )

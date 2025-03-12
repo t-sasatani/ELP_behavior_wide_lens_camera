@@ -1,3 +1,4 @@
 camera_id: 1
 resolution_index: 7
+video_format: "YUY2"  # or "YUY2"
 output_dir: recordings 

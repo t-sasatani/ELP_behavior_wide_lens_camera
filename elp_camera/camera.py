@@ -4,6 +4,12 @@ from typing import Tuple, Optional
 
 
 class ELPCamera:
+    # Video format options
+    VIDEO_FORMATS = {
+        "MJPEG": cv2.VideoWriter_fourcc(*"MJPG"),
+        "YUY2": cv2.VideoWriter_fourcc(*"YUY2"),
+    }
+
     RESOLUTIONS = [
         (3264, 2448, 15),  # 15fps
         (2592, 1944, 20),  # 20fps
@@ -19,6 +25,7 @@ class ELPCamera:
         self.camera_id = camera_id
         self.cap = None
         self.current_resolution = None
+        self.current_format = None
         self.recording = False
 
     def open(self) -> bool:
@@ -58,6 +65,22 @@ class ELPCamera:
             int(actual_height),
             int(actual_fps),
         )
+        return True
+
+    def set_format(self, format_name: str) -> bool:
+        """Set video format (MJPEG or YUY2)"""
+        if format_name not in self.VIDEO_FORMATS:
+            print(f"Unsupported format: {format_name}. Use MJPEG or YUY2")
+            return False
+
+        if self.cap is None:
+            print("Camera not initialized")
+            return False
+
+        fourcc = self.VIDEO_FORMATS[format_name]
+        self.cap.set(cv2.CAP_PROP_FOURCC, fourcc)
+        self.current_format = format_name
+        print(f"Set video format to {format_name}")
         return True
 
     def get_frame(self) -> Tuple[bool, Optional[np.ndarray]]:

@@ -34,6 +34,9 @@ def preview(
 
     try:
         camera.open()
+        # Set video format first
+        camera.set_format(camera_config.video_format)
+
         if 0 <= camera_config.resolution_index < len(camera.RESOLUTIONS):
             width, height, fps = camera.RESOLUTIONS[camera_config.resolution_index]
             camera.set_resolution(width, height, fps)
@@ -80,6 +83,9 @@ def record(
 
     try:
         camera.open()
+        # Set video format first
+        camera.set_format(camera_config.video_format)
+
         if 0 <= camera_config.resolution_index < len(camera.RESOLUTIONS):
             width, height, fps = camera.RESOLUTIONS[camera_config.resolution_index]
             camera.set_resolution(width, height, fps)

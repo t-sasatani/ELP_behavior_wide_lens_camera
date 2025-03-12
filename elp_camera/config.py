@@ -6,6 +6,7 @@ from dataclasses import dataclass
 class CameraConfig:
     camera_id: int = 1
     resolution_index: int = 7
+    video_format: str = "MJPEG"  # or "YUY2"
     output_dir: str = "recordings"
 
     @classmethod
