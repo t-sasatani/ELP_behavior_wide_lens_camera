@@ -11,6 +11,7 @@ Python package to control IMX179 ELP USB cameras using OpenCV. Supports video pr
 - Support for MJPEG and YUY2 video formats
 - Command-line interface
 - Synchronization-friendly (Unix timestamp filenames)
+- Camera restart capabilities for recovery from unstable states
 
 ## Installation
 
@@ -80,7 +81,53 @@ For preview, you can use:
 elp-camera record --camera-index 1 --resolution-index 11
 ```
 
-For recording, use resolution index 11 (1920x1080 @ ~13 FPS) which has been confirmed to work reliably.
+For recording, use:
+- Resolution index 11 (1920x1080 @ ~13 FPS) for better frame rate
+- Resolution index 10 (2048x1536 @ ~9.3 FPS) for higher resolution
+
+### Camera Recovery When Resolutions Stop Working
+
+If a resolution that previously worked stops working (often happens after switching formats or resolutions), use the camera restart command:
+
+```bash
+elp-camera restart-camera --camera-index 1 --hard-reset
+```
+
+This performs a thorough reset of the camera and can restore functionality to resolutions that have stopped working.
+
+### Automatic Camera Recovery
+
+If the camera gets into an unstable state (common after changing resolutions or formats), use the auto-restart flag:
+
+```bash
+elp-camera record --camera-index 1 --resolution-index 11 --auto-restart
+```
+
+This will attempt to restart the camera automatically if it fails to open. For more stubborn issues, add the hard reset option:
+
+```bash
+elp-camera record --camera-index 1 --resolution-index 11 --auto-restart --hard-reset
+```
+
+### Manual Camera Restart
+
+You can also manually restart the camera if it's in a bad state:
+
+```bash
+elp-camera restart-camera --camera-index 1 --resolution-index 11
+```
+
+For more persistent issues, use the hard reset option:
+
+```bash
+elp-camera restart-camera --camera-index 1 --hard-reset
+```
+
+This is useful when:
+- The camera is stuck after changing resolutions
+- Preview or recording commands fail to open the camera
+- After switching between YUY2 and MJPEG formats
+- When a resolution that worked before suddenly stops working
 
 ### Configuration File
 
@@ -88,7 +135,9 @@ The `camera_config.yaml` file contains settings that can be used to avoid typing
 
 ```yaml
 camera_id: 1  # ELP Camera (important!)
-resolution_index: 11  # 1920x1080 for reliable recording
+# Choose based on your needs:
+resolution_index: 11  # 1920x1080 for faster FPS (~13 FPS)
+# resolution_index: 10  # 2048x1536 for higher resolution (~9.3 FPS)
 video_format: "MJPEG"
 output_dir: recordings
 ```
@@ -111,11 +160,22 @@ elp-camera record --config camera_config.yaml
 3. For optimal performance:
    - Use resolution index 11 (1920x1080) for recording
    - Higher resolution modes may work for preview but can be unstable for recording
-   - If you experience issues, disconnect and reconnect the camera
+   - If you experience issues, use the `--auto-restart` flag or the `restart-camera` command
+   - As a last resort, disconnect and reconnect the camera physically
 
 4. The actual FPS is typically lower than advertised:
    - Resolution 11 (1920x1080): ~13-19 FPS (advertised as 30 FPS)
+   - Resolution 10 (2048x1536): ~9.3 FPS (advertised as 30 FPS) 
    - Resolution 1 (4656x3496): ~9.5 FPS (advertised as 1 FPS)
+   
+5. Camera state issues:
+   - **If a resolution suddenly stops working**: Use the restart command with hard reset
+     ```bash
+     elp-camera restart-camera --camera-index 1 --hard-reset
+     ```
+   - Switching between formats (MJPEG/YUY2) can cause instability
+   - Changing between certain resolutions may require a camera restart
+   - The camera reset feature can usually recover the camera without physical disconnection
 
 ### Resolution Options
 
@@ -138,11 +198,13 @@ The camera supports two video formats:
   - Compressed format
   - Smaller file sizes
   - Higher compression ratio
+  - More reliable for most operations
 
 - **YUY2 (YUYV, YUV422)**
   - Uncompressed format
   - Larger file sizes
   - Raw pixel data
+  - May cause instability when switching formats
 
 ### Controls
 

@@ -37,6 +37,9 @@ class ELPUVCCamera:
         self.cap = None
         self.current_format = None
         self.current_resolution = None
+        self.current_resolution_index = (
+            None  # Track current resolution index for restart
+        )
         self.recording = False
 
     @staticmethod
@@ -184,6 +187,9 @@ class ELPUVCCamera:
         if resolution_index < 0 or resolution_index >= len(self.RESOLUTIONS):
             print(f"Invalid resolution index: {resolution_index}")
             return False
+
+        # Store the resolution index for restart purposes
+        self.current_resolution_index = resolution_index
 
         # If in recording mode, recommend resolution 11 (1920x1080) which is confirmed working
         if recording_mode and resolution_index != 11:
@@ -417,3 +423,107 @@ class ELPUVCCamera:
                 print(f"Saved recording to {filename}")
                 print(f"Recorded {frames_written} frames in {elapsed:.2f} seconds")
                 print(f"Average FPS: {frames_written / elapsed:.2f}")
+
+    def restart(self, resolution_index=None, recording_mode=False, hard_reset=False):
+        """Restart the camera by closing and reopening it
+
+        Args:
+            resolution_index: Optional new resolution index. If None, use the current one.
+            recording_mode: True if planning to record (affects resolution validation)
+            hard_reset: If True, perform a more thorough reset by trying multiple close/reopen cycles
+
+        Returns:
+            bool: True if restart was successful, False otherwise
+        """
+        print("Restarting camera...")
+
+        # Save camera state
+        saved_camera_index = self.camera_index
+
+        # Determine resolution to use
+        if resolution_index is None and self.current_resolution_index is not None:
+            resolution_index = self.current_resolution_index
+        elif resolution_index is None:
+            # Default to 1920x1080 if no resolution specified
+            resolution_index = 11
+
+        print(
+            f"Will restart camera at index {saved_camera_index} with resolution index {resolution_index}"
+        )
+
+        # Close the camera completely
+        self.close()
+
+        # Wait for resources to be released
+        time.sleep(1)
+
+        # For hard reset, try releasing and reopening multiple times to clear any USB buffer issues
+        if hard_reset:
+            print("Performing hard reset sequence...")
+            # Try multiple open/close cycles with different resolutions to reset internal camera state
+            temp_resolutions = [17, 11]  # Try low resolution first, then higher
+            for temp_res in temp_resolutions:
+                print(f"Reset cycle with temporary resolution {temp_res}...")
+                # Try to open with a simple resolution
+                temp_cap = cv2.VideoCapture(saved_camera_index)
+                if temp_cap.isOpened():
+                    # Set some basic properties
+                    temp_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                    temp_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    # Read a frame
+                    ret, _ = temp_cap.read()
+                    print(f"  Temporary open result: {'Success' if ret else 'Failed'}")
+                    # Close it
+                    temp_cap.release()
+                    time.sleep(1)
+
+        # Try to reopen multiple times
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            print(f"Restart attempt {attempt}/{max_attempts}...")
+
+            # Re-initialize
+            self.camera_index = saved_camera_index
+
+            # For stubborn cameras, try opening with a known good resolution first (640x480)
+            if hard_reset and attempt > 1:
+                print("Trying intermediate resolution first...")
+                temp_cap = cv2.VideoCapture(saved_camera_index)
+                if temp_cap.isOpened():
+                    temp_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                    temp_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    temp_cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+                    ret, _ = temp_cap.read()
+                    temp_cap.release()
+                    time.sleep(1)
+
+            # Open with the saved or new resolution
+            success = self.open(
+                resolution_index, force_camera_index=True, recording_mode=recording_mode
+            )
+
+            if success:
+                print("Camera restarted successfully")
+                return True
+
+            # Wait before retrying
+            if attempt < max_attempts:
+                print("Restart failed, waiting before retry...")
+                time.sleep(2)
+
+        # If all attempts failed, suggest trying a known good resolution
+        if resolution_index != 11:
+            print(
+                "All restart attempts failed. Trying one last time with resolution index 11 (1920x1080)..."
+            )
+            success = self.open(
+                11, force_camera_index=True, recording_mode=recording_mode
+            )
+            if success:
+                print("Camera restarted successfully with resolution index 11")
+                print("Please use this resolution for reliable operation")
+                return True
+
+        print("Failed to restart camera after multiple attempts")
+        print("Try physically disconnecting and reconnecting the camera")
+        return False
