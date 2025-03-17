@@ -4,6 +4,7 @@ Python package to control IMX179 ELP USB cameras using OpenCV. Supports video pr
 
 ## Features
 
+- Automatic ELP USB camera detection
 - Live video preview
 - Video recording with Unix timestamp filenames
 - Multiple resolution modes support
@@ -40,17 +41,85 @@ pip install -e .
 
 ## Usage
 
-The package provides a command-line interface with two main commands:
+The package provides a command-line interface with several commands. The recommended way to use the camera is through a configuration file.
 
-### Preview Mode
+### Important: Camera Selection
 
-To preview the camera feed:
+For Mac users, the ELP camera is typically found at camera index 1:
+- Camera index 0: Built-in MacBook FaceTime camera
+- Camera index 1: ELP USB Camera (or iPhone/Continuity Camera)
+- Camera index 2: Other external cameras (if available)
+
+Always use `--camera-index 1` to ensure the ELP camera is selected.
+
+### List Available Cameras
 
 ```bash
-elp-camera preview --camera-id 0 --resolution-index 0
+elp-camera list-devices
 ```
 
-Resolution indices:
+### List Available Resolutions
+
+```bash
+elp-camera list-resolutions
+```
+
+### Preview Camera Feed
+
+```bash
+elp-camera preview --camera-index 1 --resolution-index 1
+```
+
+For preview, you can use:
+- Resolution index 1 (4656x3496) for highest quality preview (~9.5 FPS)
+- Resolution index 11 (1920x1080) for faster preview (~19 FPS)
+
+### Record Video
+
+```bash
+elp-camera record --camera-index 1 --resolution-index 11
+```
+
+For recording, use resolution index 11 (1920x1080 @ ~13 FPS) which has been confirmed to work reliably.
+
+### Configuration File
+
+The `camera_config.yaml` file contains settings that can be used to avoid typing parameters:
+
+```yaml
+camera_id: 1  # ELP Camera (important!)
+resolution_index: 11  # 1920x1080 for reliable recording
+video_format: "MJPEG"
+output_dir: recordings
+```
+
+Use the config file with:
+
+```bash
+elp-camera record --config camera_config.yaml
+```
+
+## Troubleshooting
+
+1. If the wrong camera is selected, explicitly specify camera index 1:
+   ```bash
+   elp-camera record --camera-index 1 --resolution-index 11
+   ```
+
+2. If auto-detection fails, make sure the ELP camera is properly connected via USB.
+
+3. For optimal performance:
+   - Use resolution index 11 (1920x1080) for recording
+   - Higher resolution modes may work for preview but can be unstable for recording
+   - If you experience issues, disconnect and reconnect the camera
+
+4. The actual FPS is typically lower than advertised:
+   - Resolution 11 (1920x1080): ~13-19 FPS (advertised as 30 FPS)
+   - Resolution 1 (4656x3496): ~9.5 FPS (advertised as 1 FPS)
+
+### Resolution Options
+
+Available resolution indices:
 
 - 0: 3264x2448 @ 15fps
 - 1: 2592x1944 @ 20fps
@@ -60,16 +129,6 @@ Resolution indices:
 - 5: 1024x768 @ 30fps
 - 6: 800x600 @ 30fps
 - 7: 640x480 @ 30fps
-
-### Recording Mode
-
-To record video (with Unix timestamp filename):
-
-```bash
-elp-camera record --camera-id 0 --resolution-index 0 --output-dir recordings
-```
-
-The video will be saved in the specified output directory with a Unix timestamp as the filename (e.g., `1234567890.avi`).
 
 ### Video Formats
 
@@ -85,16 +144,10 @@ The camera supports two video formats:
   - Larger file sizes
   - Raw pixel data
 
-You can specify the format in the config file:
-
-```yaml
-video_format: "MJPEG"  # or "YUY2"
-```
-
 ### Controls
 
 - Press 'q' to quit preview or recording mode
-- Videos are saved in AVI format using XVID codec
+- Videos are saved in AVI format
 
 ## Requirements
 
@@ -102,3 +155,5 @@ video_format: "MJPEG"  # or "YUY2"
 - OpenCV
 - Click
 - NumPy
+- PyYAML
+- libusb1

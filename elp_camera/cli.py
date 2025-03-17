@@ -1,125 +1,112 @@
 import click
-import cv2
 import os
-from .camera import ELPCamera
-from .recorder import CameraRecorder
+from .uvc_camera import ELPUVCCamera
 from .config import CameraConfig
 
 
 @click.group()
 def cli():
-    """ELP Camera Control CLI"""
+    """ELP camera control CLI with UVC support"""
     pass
 
 
 @cli.command()
-@click.option("--camera-id", default=0, help="Camera device ID")
-@click.option("--resolution-index", default=0, help="Resolution index (0-7)")
+def list_devices():
+    """List available cameras"""
+    devices = ELPUVCCamera.list_devices()
+    if devices:
+        click.echo("Found cameras:")
+        for dev in devices:
+            elp_status = " (ELP USB Camera)" if dev["is_elp"] else ""
+            click.echo(f"Camera {dev['index']}: {dev['name']}{elp_status}")
+    else:
+        click.echo("No cameras found")
+
+
+@cli.command()
+@click.option(
+    "--resolution-index",
+    default=17,
+    help="Resolution index (0-17, see list-resolutions)",
+)
+@click.option(
+    "--camera-index",
+    type=int,
+    help="Camera index (0=built-in, 1=iPhone/external, 2+=other)",
+)
 @click.option("--config", type=str, help="Path to YAML configuration file")
-def preview(
-    camera_id: int,
-    resolution_index: int,
-    config: str,
-):
+def preview(resolution_index, camera_index, config):
     """Preview camera feed"""
     if config and os.path.exists(config):
         camera_config = CameraConfig.from_yaml(config)
-    else:
-        camera_config = CameraConfig(
-            camera_id=camera_id,
-            resolution_index=resolution_index,
-        )
+        resolution_index = getattr(camera_config, "resolution_index", resolution_index)
+        if camera_index is None and hasattr(camera_config, "camera_id"):
+            camera_index = getattr(camera_config, "camera_id")
 
-    camera = ELPCamera(camera_config.camera_id)
-
+    camera = ELPUVCCamera(camera_index)
     try:
-        camera.open()
-        # Set video format first
-        camera.set_format(camera_config.video_format)
-
-        if 0 <= camera_config.resolution_index < len(camera.RESOLUTIONS):
-            width, height, fps = camera.RESOLUTIONS[camera_config.resolution_index]
-            camera.set_resolution(width, height, fps)
-            click.echo(f"Set resolution to {width}x{height} @ {fps}fps")
-
-        while True:
-            ret, frame = camera.get_frame()
-            if ret:
-                cv2.imshow("Preview", frame)
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    break
-            else:
-                click.echo("Failed to get frame")
-                break
-
+        force_camera = camera_index is not None
+        if camera.open(resolution_index, force_camera_index=force_camera):
+            camera.preview()
+        else:
+            click.echo(
+                "Failed to open camera. Try specifying --camera-index explicitly."
+            )
     finally:
         camera.close()
-        cv2.destroyAllWindows()
 
 
 @cli.command()
-@click.option("--camera-id", default=0, help="Camera device ID")
-@click.option("--resolution-index", default=0, help="Resolution index (0-7)")
-@click.option("--output-dir", default="recordings", help="Output directory")
+@click.option(
+    "--resolution-index",
+    default=11,  # Default to 1920x1080 which is confirmed working for recording
+    help="Resolution index (0-17, see list-resolutions)",
+)
+@click.option(
+    "--camera-index",
+    type=int,
+    help="Camera index (0=built-in, 1=iPhone/external, 2+=other)",
+)
+@click.option(
+    "--output-dir", default="recordings", help="Output directory for recordings"
+)
 @click.option("--config", type=str, help="Path to YAML configuration file")
-def record(
-    camera_id: int,
-    resolution_index: int,
-    output_dir: str,
-    config: str,
-):
+def record(resolution_index, camera_index, output_dir, config):
     """Record video with Unix timestamp filename"""
-    # Load config file if provided
     if config and os.path.exists(config):
         camera_config = CameraConfig.from_yaml(config)
-    else:
-        camera_config = CameraConfig(
-            camera_id=camera_id,
-            resolution_index=resolution_index,
-            output_dir=output_dir,
-        )
+        resolution_index = getattr(camera_config, "resolution_index", resolution_index)
+        output_dir = getattr(camera_config, "output_dir", output_dir)
+        if camera_index is None and hasattr(camera_config, "camera_id"):
+            camera_index = getattr(camera_config, "camera_id")
 
-    camera = ELPCamera(camera_config.camera_id)
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
 
+    camera = ELPUVCCamera(camera_index)
     try:
-        camera.open()
-        # Set video format first
-        camera.set_format(camera_config.video_format)
-
-        if 0 <= camera_config.resolution_index < len(camera.RESOLUTIONS):
-            width, height, fps = camera.RESOLUTIONS[camera_config.resolution_index]
-            camera.set_resolution(width, height, fps)
-            click.echo(f"Set resolution to {width}x{height} @ {fps}fps")
-
-        recorder = CameraRecorder(camera, camera_config.output_dir)
-        recorder.start_recording()
-        click.echo(f"Recording to {recorder.current_filename}")
-
-        while True:
-            ret, frame = camera.get_frame()
-            if ret:
-                recorder.record_frame(frame)
-                cv2.imshow("Recording", frame)
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    break
-            else:
-                click.echo("Failed to get frame")
-                break
-
+        force_camera = camera_index is not None
+        if camera.open(
+            resolution_index, force_camera_index=force_camera, recording_mode=True
+        ):
+            camera.record(output_dir)
+        else:
+            click.echo(
+                "Failed to open camera. Try specifying --camera-index 1 and --resolution-index 11."
+            )
     finally:
-        recorder.stop_recording()
         camera.close()
-        cv2.destroyAllWindows()
 
 
 @cli.command()
-def list_cameras():
-    """List available cameras"""
-    cameras = ELPCamera.list_cameras()
-    if cameras:
-        click.echo(f"Found cameras at indices: {cameras}")
-    else:
-        click.echo("No cameras found")
+def list_resolutions():
+    """List available resolutions for the ELP camera"""
+    click.echo("Available resolutions for ELP camera:")
+    camera = ELPUVCCamera()
+    for i, res in enumerate(camera.RESOLUTIONS):
+        click.echo(
+            f"{i}: {res['width']}x{res['height']} @ {res['fps']}fps ({res['format']})"
+        )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,30 @@
-camera_id: 1
-resolution_index: 7
-video_format: "YUY2"  # or "YUY2"
+#camera_id: 1
+camera_id: 1  # ELP camera is at index 1
+
+# Available resolutions for ELP camera with testing results:
+# 0: 4656x3496 @ 10fps (MJPEG) - Preview only
+# 1: 4656x3496 @ 1fps (YUY2) - Preview works (~9.5 FPS), recording fails
+# 2: 4208x3120 @ 10fps (MJPEG) - Not tested
+# 3: 4208x3120 @ 1fps (YUY2) - Not tested
+# 4: 4160x3120 @ 10fps (MJPEG) - Not tested
+# 5: 4000x3000 @ 10fps (MJPEG) - Not tested
+# 6: 3840x2160 @ 10fps (MJPEG) - Not tested
+# 7: 3264x2448 @ 10fps (MJPEG) - Not tested
+# 8: 2592x1944 @ 10fps (MJPEG) - Not tested
+# 9: 2320x1744 @ 30fps (MJPEG) - Not tested
+# 10: 2048x1536 @ 30fps (MJPEG) - Not tested
+# 11: 1920x1080 @ 30fps (MJPEG) - CONFIRMED WORKING (preview ~19 FPS, recording ~13 FPS)
+# 12: 1600x1200 @ 30fps (MJPEG) - Not tested
+# 13: 1280x960 @ 30fps (MJPEG) - Not tested
+# 14: 1280x720 @ 30fps (MJPEG) - Not tested
+# 15: 1024x768 @ 30fps (MJPEG) - Not tested
+# 16: 800x600 @ 30fps (MJPEG) - Preview works, recording fails
+# 17: 640x480 @ 30fps (MJPEG) - Preview works, recording not tested
+
+# RECOMMENDED SETTINGS:
+# For preview: resolution_index: 1 (highest resolution) or 11 (faster FPS)
+# For recording: resolution_index: 11 (1920x1080 @ ~13 FPS)
+
+resolution_index: 11  # 1920x1080 @ 30fps - Best option for recording
+video_format: "MJPEG"  # MJPEG works better than YUY2
 output_dir: recordings 
