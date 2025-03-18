@@ -527,3 +527,280 @@ class ELPUVCCamera:
         print("Failed to restart camera after multiple attempts")
         print("Try physically disconnecting and reconnecting the camera")
         return False
+
+    def get_camera_properties(self):
+        """Get all available camera properties and their current values"""
+        if not self.cap or not self.cap.isOpened():
+            print("Camera not open")
+            return {}
+
+        # Common camera properties in OpenCV
+        properties = {
+            "CAP_PROP_BRIGHTNESS": cv2.CAP_PROP_BRIGHTNESS,
+            "CAP_PROP_CONTRAST": cv2.CAP_PROP_CONTRAST,
+            "CAP_PROP_SATURATION": cv2.CAP_PROP_SATURATION,
+            "CAP_PROP_HUE": cv2.CAP_PROP_HUE,
+            "CAP_PROP_GAIN": cv2.CAP_PROP_GAIN,
+            "CAP_PROP_EXPOSURE": cv2.CAP_PROP_EXPOSURE,
+            "CAP_PROP_AUTO_EXPOSURE": cv2.CAP_PROP_AUTO_EXPOSURE,
+            "CAP_PROP_GAMMA": cv2.CAP_PROP_GAMMA,
+            "CAP_PROP_BACKLIGHT": cv2.CAP_PROP_BACKLIGHT,
+            "CAP_PROP_TEMPERATURE": cv2.CAP_PROP_TEMPERATURE,
+            "CAP_PROP_ZOOM": cv2.CAP_PROP_ZOOM,
+            "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
+            "CAP_PROP_AUTOFOCUS": cv2.CAP_PROP_AUTOFOCUS,
+            "CAP_PROP_SHARPNESS": cv2.CAP_PROP_SHARPNESS,
+        }
+
+        # Additional properties to check (may work on some cameras)
+        extended_properties = {
+            # Additional IDs that might be used by some cameras/drivers
+            "CAP_PROP_GAIN_ALT": 81,  # Alternative gain property
+            "CAP_PROP_EXPOSURE_ALT1": 15,  # Alternative exposure property
+            "CAP_PROP_EXPOSURE_ALT2": 4,
+            "CAP_PROP_EXPOSURE_ALT3": 204,
+            "CAP_PROP_AUTO_EXPOSURE_ALT1": 21,
+            "CAP_PROP_AUTO_EXPOSURE_ALT2": 39,
+            "CAP_PROP_AUTO_EXPOSURE_ALT3": 1024,
+        }
+
+        # Get current values
+        current_values = {}
+        # Check standard properties
+        for name, prop_id in properties.items():
+            value = self.cap.get(prop_id)
+            current_values[name] = value
+
+        # Also check extended properties
+        for name, prop_id in extended_properties.items():
+            value = self.cap.get(prop_id)
+            # Only include non-zero values to reduce clutter
+            if abs(value) > 0.01:
+                current_values[name] = value
+
+        # Include changeable status
+        print("\nTesting which properties can be changed:")
+        for name, prop_id in properties.items():
+            initial = self.cap.get(prop_id)
+            # Try to set a different value
+            test_value = 10 if abs(initial) < 1 else initial + 5
+
+            # Save current frame to allow camera to stabilize after change
+            ret, _ = self.cap.read()
+
+            if self.cap.set(prop_id, test_value):
+                # Read a frame to refresh camera state
+                ret, _ = self.cap.read()
+                new_value = self.cap.get(prop_id)
+                changed = abs(new_value - initial) > 0.01
+
+                # Restore original value
+                self.cap.set(prop_id, initial)
+                # Read a frame to refresh camera state
+                ret, _ = self.cap.read()
+
+                current_values[f"{name}_CHANGEABLE"] = "YES" if changed else "NO"
+            else:
+                current_values[f"{name}_CHANGEABLE"] = "NO"
+
+        return current_values
+
+    def set_camera_property(self, prop_name, value):
+        """Set a camera property by name
+
+        Args:
+            prop_name: Property name (e.g., "GAIN", "EXPOSURE", "BRIGHTNESS")
+            value: The value to set
+
+        Returns:
+            bool: True if property was set successfully, False otherwise
+        """
+        if not self.cap or not self.cap.isOpened():
+            print("Camera not open")
+            return False
+
+        # Map property names to OpenCV constants
+        property_map = {
+            "BRIGHTNESS": cv2.CAP_PROP_BRIGHTNESS,
+            "CONTRAST": cv2.CAP_PROP_CONTRAST,
+            "SATURATION": cv2.CAP_PROP_SATURATION,
+            "HUE": cv2.CAP_PROP_HUE,
+            "GAIN": cv2.CAP_PROP_GAIN,
+            "EXPOSURE": cv2.CAP_PROP_EXPOSURE,
+            "AUTO_EXPOSURE": cv2.CAP_PROP_AUTO_EXPOSURE,
+            "GAMMA": cv2.CAP_PROP_GAMMA,
+            "BACKLIGHT": cv2.CAP_PROP_BACKLIGHT,
+            "TEMPERATURE": cv2.CAP_PROP_TEMPERATURE,
+            "ZOOM": cv2.CAP_PROP_ZOOM,
+            "FOCUS": cv2.CAP_PROP_FOCUS,
+            "AUTOFOCUS": cv2.CAP_PROP_AUTOFOCUS,
+            "SHARPNESS": cv2.CAP_PROP_SHARPNESS,
+        }
+
+        # Alternative property IDs - some cameras use different IDs for the same properties
+        alternative_property_map = {
+            # Known alternatives for different camera drivers/backends
+            "BRIGHTNESS": [10, 1, 101],
+            "CONTRAST": [11, 2, 102],
+            "SATURATION": [12, 3, 103],
+            "HUE": [13, 4, 104],
+            "GAIN": [
+                14,
+                5,
+                105,
+                81,
+            ],  # 81 is an alternative gain control on some cameras
+            "EXPOSURE": [15, 6, 106, 4, 204],  # Multiple alternatives for exposure
+            "AUTO_EXPOSURE": [16, 21, 39, 1024],  # Different auto exposure controls
+        }
+
+        # Find the property ID
+        prop_name = prop_name.upper()
+        if prop_name not in property_map:
+            print(f"Unknown property: {prop_name}")
+            return False
+
+        prop_id = property_map[prop_name]
+
+        # Get initial value for comparison
+        initial_value = self.cap.get(prop_id)
+        print(f"Initial {prop_name} value: {initial_value}")
+
+        # Try to set the property using standard ID
+        print(f"Attempting to set {prop_name} ({prop_id}) to {value}")
+        result = self.cap.set(prop_id, value)
+
+        # Verify if value changed
+        new_value = self.cap.get(prop_id)
+        print(f"After set attempt - {prop_name} value: {new_value}")
+
+        if (
+            result and abs(new_value - value) < 0.1
+        ):  # Allow small floating point difference
+            print(f"Successfully set {prop_name} to {new_value}")
+            return True
+        else:
+            print("Standard property ID failed, trying alternative IDs")
+
+            # Try alternative property IDs if the standard one failed
+            if prop_name in alternative_property_map:
+                for alt_id in alternative_property_map[prop_name]:
+                    print(f"Trying alternative ID {alt_id} for {prop_name}")
+                    alt_initial = self.cap.get(alt_id)
+                    print(f"  Current value with ID {alt_id}: {alt_initial}")
+
+                    # Try setting with alternative ID
+                    alt_result = self.cap.set(alt_id, value)
+                    alt_new = self.cap.get(alt_id)
+                    print(f"  After set attempt - value with ID {alt_id}: {alt_new}")
+
+                    if alt_result and abs(alt_new - alt_initial) > 0.01:
+                        print(
+                            f"Successfully set {prop_name} using alternative ID {alt_id}"
+                        )
+                        return True
+
+            print(f"Failed to set {prop_name} to {value} (no change detected)")
+
+            # For exposure specifically, we'll try setting auto exposure modes as well
+            if prop_name == "EXPOSURE":
+                print("Trying to disable auto exposure first...")
+                # Try different auto exposure modes (0 is often manual, 1 is auto, 3 is another auto mode)
+                auto_exp_ids = [cv2.CAP_PROP_AUTO_EXPOSURE, 21, 39, 1024]
+                for auto_id in auto_exp_ids:
+                    print(f"  Setting auto exposure ID {auto_id} to 0 (manual mode)")
+                    self.cap.set(auto_id, 0)
+
+                # Try setting exposure again
+                print(f"  Retrying exposure ({prop_id}) with auto exposure disabled")
+                retry_result = self.cap.set(prop_id, value)
+                retry_value = self.cap.get(prop_id)
+                print(f"  After retry - {prop_name} value: {retry_value}")
+
+                if retry_result and abs(retry_value - initial_value) > 0.01:
+                    print(f"Successfully set {prop_name} after disabling auto exposure")
+                    return True
+
+            return False
+
+    def set_gain(self, gain_value):
+        """Set camera gain
+
+        Args:
+            gain_value: Gain value (typically 0-100)
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        return self.set_camera_property("GAIN", gain_value)
+
+    def set_exposure(self, exposure_value):
+        """Set camera exposure
+
+        Args:
+            exposure_value: Exposure value (negative values for auto exposure)
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        return self.set_camera_property("EXPOSURE", exposure_value)
+
+    def set_auto_exposure(self, auto_exposure):
+        """Set auto exposure mode
+
+        Args:
+            auto_exposure: 0 for manual, 1 for auto (may vary by camera)
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        return self.set_camera_property("AUTO_EXPOSURE", auto_exposure)
+
+    def set_brightness(self, brightness_value):
+        """Set camera brightness
+
+        Args:
+            brightness_value: Brightness value (typically 0-100)
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        return self.set_camera_property("BRIGHTNESS", brightness_value)
+
+    def set_fps(self, fps_value):
+        """Set camera frames per second (FPS)
+
+        Args:
+            fps_value: FPS value to set (typically 5-30)
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        if not self.cap or not self.cap.isOpened():
+            print("Camera not open")
+            return False
+
+        FPS_PROP_ID = 5  # Property ID 5 corresponds to FPS in OpenCV
+
+        # Get initial value for comparison
+        initial_fps = self.cap.get(FPS_PROP_ID)
+        print(f"Initial FPS value: {initial_fps}")
+
+        # Try to set the FPS
+        print(f"Attempting to set FPS to {fps_value}")
+        result = self.cap.set(FPS_PROP_ID, fps_value)
+
+        # Take a few frames to apply the change
+        for _ in range(3):
+            ret, _ = self.cap.read()
+
+        # Check if it worked
+        new_fps = self.cap.get(FPS_PROP_ID)
+        print(f"After set attempt - FPS value: {new_fps}")
+
+        if result and abs(new_fps - initial_fps) > 0.01:
+            print(f"Successfully set FPS to {new_fps}")
+            return True
+        else:
+            print(f"Failed to set FPS to {fps_value} (no change detected)")
+            return False
