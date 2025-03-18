@@ -344,6 +344,8 @@ If you find that camera properties aren't changing despite using the commands ab
    - **Property ID 5**: Current FPS value (can be changed)
    - **Property ID 8**: Unknown purpose, value is 16.0 (read-only)
    
+   > **Important Note for macOS Users**: Many camera parameters like gain, exposure, and white balance cannot be controlled through OpenCV on macOS. For these parameters, we recommend using the 'Webcam Settings' app, which works well with ELP cameras. See the "Alternative Camera Control for macOS Users" section below for more details.
+   
    **Height Control (Property ID 4)**:
    
    This property appears to control image height and can be adjusted to values like 1100, 1200, 1300, or 1744:
@@ -373,6 +375,24 @@ If you find that camera properties aren't changing despite using the commands ab
    Note that the actual achievable frame rate may be limited by your camera hardware, resolution, and USB bandwidth.
 
 6. If all else fails, you may need to use external lighting or positioning to control the brightness and exposure of your recordings, as macOS camera drivers often limit direct property control.
+
+### Alternative Camera Control for macOS Users
+
+While OpenCV on macOS has limitations for controlling camera parameters like gain, exposure, white balance, etc., there is a great alternative:
+
+**Webcam Settings App**
+- The 'Webcam Settings' app for macOS works well with ELP cameras
+- It provides direct control over:
+  - Gain
+  - Exposure
+  - White balance
+  - Brightness
+  - Contrast
+  - And other camera parameters
+
+This approach is often more reliable than trying to control these parameters through OpenCV, especially on macOS where camera driver interfaces have more restrictions. The settings applied through the 'Webcam Settings' app will persist while the camera is in use by this software.
+
+You can use the 'Webcam Settings' app to adjust your camera before starting recording with the ELP Camera control commands.
 
 ### Resolution Options
 
