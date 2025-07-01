@@ -1,44 +1,46 @@
-# Virtual Environment
+# Python virtual environment
 venv/
 env/
 ENV/
 
-# Python
+# Python cache files
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
+.pytest_cache/
+
+# Distribution / packaging
 *.egg-info/
-.installed.cfg
+dist/
+build/
 *.egg
 
-# IDE specific files
+# Recorded videos (optional, exclude by default)
+recordings/
+*.avi
+*.mp4
+
+# Test files 
+test_*.py
+
+# Unused files
+elp_camera/sf_control.py
+elp_camera/uvc_control.py
+
+# Logs
+*.log
+
+# OS specific files
+.DS_Store
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# IDE files
 .idea/
 .vscode/
 *.swp
 *.swo
 .project
 .pydevproject
-.settings/
-
-# Project specific
-recordings/
-*.avi
-*.mp4
-
-# OS specific
-.DS_Store
-Thumbs.db 
+.settings/ 

@@ -9,6 +9,7 @@ setup(
         "click",
         "numpy",
         "pyyaml",
+        "libusb1",
     ],
     entry_points={
         "console_scripts": [
