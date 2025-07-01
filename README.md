@@ -19,7 +19,7 @@ Python package to control IMX179 ELP USB cameras using OpenCV. Supports video pr
 
 ```bash
 # On Linux/Mac
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 
 # On Windows
