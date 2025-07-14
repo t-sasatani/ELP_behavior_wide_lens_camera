@@ -1,5 +1,4 @@
 #camera_id: 1
-camera_id: 1  # ELP camera is at index 1
 
 # Available resolutions for ELP camera with testing results:
 # 0: 4656x3496 @ 10fps (MJPEG) - Preview only
@@ -35,4 +34,4 @@ resolution_index: 11  # 1920x1080 @ 30fps - Faster frame rate
 # elp-camera restart-camera --camera-index 1 --hard-reset
 
 video_format: "MJPEG"  # MJPEG works better than YUY2
-output_dir: recordings 
+output_dir: recordings

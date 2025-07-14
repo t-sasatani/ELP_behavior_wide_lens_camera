@@ -358,7 +358,7 @@ class ELPUVCCamera:
                 print(f"Average FPS: {frames_shown / elapsed:.2f}")
 
     def record(self, output_dir: str):
-        """Record video to file"""
+        """Record video to file and log frame numbers and timestamps to a CSV file"""
         if not self.cap:
             print("Camera not open")
             return
@@ -369,6 +369,7 @@ class ELPUVCCamera:
         # Create video writer
         timestamp = int(time.time())
         filename = os.path.join(output_dir, f"{timestamp}.avi")
+        csv_filename = os.path.join(output_dir, f"{timestamp}.csv")
 
         width, height, fps = self.current_resolution
 
@@ -392,12 +393,26 @@ class ELPUVCCamera:
         frames_written = 0
         start_time = time.time()
 
+        # Frame logging buffer
+        frame_log_buffer = []  # List of (frame_number, unix_timestamp)
+        BUFFER_SIZE = 100
+
         try:
             while True:
                 ret, frame = self.get_frame()
                 if ret:
                     writer.write(frame)
                     frames_written += 1
+
+                    # Log frame number and timestamp (ms precision)
+                    frame_log_buffer.append((frames_written, int(time.time() * 1000)))
+
+                    # Write buffer to CSV every 100 frames
+                    if len(frame_log_buffer) >= BUFFER_SIZE:
+                        with open(csv_filename, "a") as csvfile:
+                            for fn, ts in frame_log_buffer:
+                                csvfile.write(f"{fn},{ts}\n")
+                        frame_log_buffer.clear()
 
                     # Update stats every ~30 frames
                     if frames_written % 30 == 0:
@@ -416,6 +431,11 @@ class ELPUVCCamera:
                     time.sleep(0.1)
 
         finally:
+            # Flush any remaining frame logs to CSV
+            if frame_log_buffer:
+                with open(csv_filename, "a") as csvfile:
+                    for fn, ts in frame_log_buffer:
+                        csvfile.write(f"{fn},{ts}\n")
             writer.release()
             cv2.destroyAllWindows()
             elapsed = time.time() - start_time
