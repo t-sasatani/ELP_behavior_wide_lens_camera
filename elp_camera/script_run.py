@@ -49,6 +49,7 @@ writer_thread = threading.Thread(target=video_writer_thread)
 writer_thread.start()
 
 print(f"Recording to {output_filename} - will auto-stop after 10 seconds")
+print("Press ESC to exit early")
 
 # Record for 10 seconds
 start_time = time.time()
@@ -57,17 +58,28 @@ frame_count = 0
 while time.time() - start_time < 10:
     ret, frame = cap.read()
     if ret:
+        # Show preview
+        cv2.imshow('Camera Preview', frame)
+        
+        # Add frame to recording queue
         try:
             frame_queue.put_nowait(frame)
             frame_count += 1
         except queue.Full:
             continue
+    
+    # Check for ESC key to exit early
+    key = cv2.waitKey(1) & 0xFF
+    if key == 27:  # ESC key
+        print("ESC pressed - stopping recording")
+        break
 
 # Cleanup
 writing_active.clear()
 writer_thread.join()
 cap.release()
 out.release()
+cv2.destroyAllWindows()
 
 elapsed_time = time.time() - start_time
 fps = frame_count / elapsed_time
