@@ -2,6 +2,7 @@ import time
 import cv2
 import os
 from typing import Optional, List, Dict
+import sys
 
 
 class ELPUVCCamera:
@@ -215,7 +216,10 @@ class ELPUVCCamera:
 
         try:
             print(f"Opening camera at index {self.camera_index}")
-            self.cap = cv2.VideoCapture(self.camera_index)
+            if sys.platform == "darwin":
+                self.cap = cv2.VideoCapture(self.camera_index, cv2.CAP_AVFOUNDATION)
+            else:
+                self.cap = cv2.VideoCapture(self.camera_index)
             if not self.cap.isOpened():
                 print(f"Failed to open camera at index {self.camera_index}")
                 return False
@@ -226,37 +230,32 @@ class ELPUVCCamera:
                 f"Setting resolution to {res['width']}x{res['height']} @ {res['fps']}fps ({res['format']})"
             )
 
-            # Take a test frame before changing settings to verify camera works
-            ret, before_frame = self.cap.read()
-            if ret:
-                print(
-                    f"Camera is working. Initial frame: {before_frame.shape[1]}x{before_frame.shape[0]}"
-                )
-            else:
-                print("Warning: Could not get initial test frame")
-                self.close()
-                return False
-
-            # Set format using fourcc
+            # Set format and properties immediately after opening
             if res["format"] == "MJPEG":
                 fourcc = cv2.VideoWriter_fourcc(*"MJPG")
             else:  # YUY2
                 fourcc = cv2.VideoWriter_fourcc(*"YUY2")
-
-            # Set properties - do this in a specific order for better compatibility
             self.cap.set(cv2.CAP_PROP_FOURCC, fourcc)
             self.cap.set(cv2.CAP_PROP_FPS, res["fps"])
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, res["width"])
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, res["height"])
 
-            # Verify the settings were applied
-            actual_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            actual_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            actual_fps = int(self.cap.get(cv2.CAP_PROP_FPS))
-
-            print(
-                f"Actual resolution: {actual_width}x{actual_height} @ {actual_fps}fps"
-            )
+            # Now take a test frame
+            ret, before_frame = self.cap.read()
+            if ret:
+                actual_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                actual_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                actual_fps = int(self.cap.get(cv2.CAP_PROP_FPS))
+                print(
+                    f"Camera is working. Initial frame: {before_frame.shape[1]}x{before_frame.shape[0]}"
+                )
+                print(
+                    f"Actual resolution: {actual_width}x{actual_height} @ {actual_fps}fps"
+                )
+            else:
+                print("Warning: Could not get initial test frame")
+                self.close()
+                return False
 
             # Take a test frame
             print("Taking test frame with new settings...")

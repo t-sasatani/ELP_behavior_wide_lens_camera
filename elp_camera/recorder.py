@@ -28,6 +28,11 @@ class CameraRecorder:
             return False
 
         width, height, fps = resolution
+
+        # Explicitly set the frame width and height using cv2 properties
+        self.camera.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        self.camera.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+
         self.current_filename = f"{self.output_dir}/{timestamp}.avi"
 
         # Check if directory is writable
